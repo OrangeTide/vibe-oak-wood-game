@@ -3,6 +3,9 @@ import Phaser from 'phaser';
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private bgLayer1!: Phaser.GameObjects.TileSprite;
+  private bgLayer2!: Phaser.GameObjects.TileSprite;
+  private bgLayer3!: Phaser.GameObjects.TileSprite;
 
   constructor() {
     super('GameScene');
@@ -35,16 +38,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    // Step 1: Parallax backgrounds
-    this.add.tileSprite(160, 90, 320, 180, 'bg_layer1').setScrollFactor(0);
-    this.add.tileSprite(160, 90, 320, 180, 'bg_layer2').setScrollFactor(0.3);
-    this.add.tileSprite(160, 90, 320, 180, 'bg_layer3').setScrollFactor(0.6);
+    // Parallax backgrounds — fixed to camera, scrolled manually in update()
+    this.bgLayer1 = this.add.tileSprite(160, 90, 320, 180, 'bg_layer1')
+      .setScrollFactor(0).setDepth(0);
+    this.bgLayer2 = this.add.tileSprite(160, 90, 320, 180, 'bg_layer2')
+      .setScrollFactor(0).setDepth(1);
+    this.bgLayer3 = this.add.tileSprite(160, 90, 320, 180, 'bg_layer3')
+      .setScrollFactor(0).setDepth(2);
 
-    // Step 2: Ground tilemap
+    // Ground tilemap — wide enough for effectively infinite scrolling
+    const MAP_W = 2000;
     const map = this.make.tilemap({
       tileWidth: 24,
       tileHeight: 24,
-      width: 14,
+      width: MAP_W,
       height: 8,
     });
     const tileset = map.addTilesetImage(
@@ -53,71 +60,81 @@ export class GameScene extends Phaser.Scene {
     const groundLayer = map.createBlankLayer('ground', tileset)!;
     groundLayer.setDepth(5);
 
-    // Tile indices from the 21-column tileset (verified from reference image)
-    // Platform 9-patch at cols 0-3, rows 0-2:
-    const TL = 0;   // top-left corner (grass surface + left edge)
-    const TC = 1;   // top center (grass surface, repeating)
-    const TC2 = 2;  // top center variant (for visual variety)
-    const TR = 3;   // top-right corner (grass surface + right edge)
-    const ML = 21;  // middle left edge (stone wall)
-    const MC = 22;  // middle center (solid dark stone fill)
-    const MR = 24;  // middle right edge (stone wall)
-    const BL = 42;  // bottom-left corner
-    const BR = 45;  // bottom-right corner
+    // Tile indices (verified from tileset reference image)
+    const TL = 0;   // top-left corner (grass + left edge)
+    const TC = 1;   // top center (grass surface)
+    const TC2 = 2;  // top center variant
+    const TR = 3;   // top-right corner (grass + right edge)
+    const ML = 21;  // middle left edge
+    const MC = 22;  // middle center (solid fill)
+    const MR = 24;  // middle right edge
 
-    // Lower ground (left side): surface at row 6, cols 0-7
-    // Left edge goes off screen → use TC, no TL needed
-    for (let x = 0; x < 7; x++) {
-      groundLayer.putTileAt(x % 2 === 0 ? TC : TC2, x, 6);
+    // 1. Fill entire lower ground across full width (rows 6-7)
+    groundLayer.fill(TC, 0, 6, MAP_W, 1);
+    groundLayer.fill(MC, 0, 7, MAP_W, 1);
+
+    // Add surface variety (alternate TC2 on odd columns)
+    for (let x = 1; x < MAP_W; x += 2) {
+      groundLayer.putTileAt(TC2, x, 6);
     }
-    groundLayer.putTileAt(TR, 7, 6); // right end before step
 
-    // Lower ground fill (row 7)
-    for (let x = 0; x < 7; x++) {
+    // 2. Carve out the raised step section near center
+    const STEP_L = 1008; // upper platform left column
+    const STEP_R = 1013; // upper platform right column
+
+    // Right edge of lower ground before step
+    groundLayer.putTileAt(TR, STEP_L - 1, 6);
+    groundLayer.putTileAt(MR, STEP_L - 1, 7);
+
+    // Upper platform body (overwrite lower ground at rows 6-7)
+    groundLayer.putTileAt(ML, STEP_L, 6);
+    groundLayer.putTileAt(ML, STEP_L, 7);
+    for (let x = STEP_L + 1; x < STEP_R; x++) {
+      groundLayer.putTileAt(MC, x, 6);
       groundLayer.putTileAt(MC, x, 7);
     }
-    groundLayer.putTileAt(MR, 7, 7);
+    groundLayer.putTileAt(MR, STEP_R, 6);
+    groundLayer.putTileAt(MR, STEP_R, 7);
 
-    // Upper platform (right side): surface at row 5, cols 8-13
-    groundLayer.putTileAt(TL, 8, 5); // left corner at step
-    for (let x = 9; x < 14; x++) {
+    // Left edge of lower ground resuming after step
+    groundLayer.putTileAt(TL, STEP_R + 1, 6);
+    groundLayer.putTileAt(ML, STEP_R + 1, 7);
+
+    // Upper platform surface (row 5)
+    groundLayer.putTileAt(TL, STEP_L, 5);
+    for (let x = STEP_L + 1; x < STEP_R; x++) {
       groundLayer.putTileAt(x % 2 === 0 ? TC : TC2, x, 5);
     }
+    groundLayer.putTileAt(TR, STEP_R, 5);
 
-    // Upper platform fill (rows 6-7)
-    for (let y = 6; y < 8; y++) {
-      groundLayer.putTileAt(ML, 8, y); // left wall at step
-      for (let x = 9; x < 14; x++) {
-        groundLayer.putTileAt(MC, x, y);
-      }
-    }
-
-    // Set collision on all placed tiles
     groundLayer.setCollisionBetween(0, 315);
 
-    // Decorations (origin bottom-center so they sit on the ground surface)
+    // Decorations positioned near center (offset = 1000 * 24 = 24000)
+    const O = 1000 * 24; // world offset for center section
     const leftGround = 6 * 24;  // y=144
     const rightGround = 5 * 24; // y=120
 
-    this.add.image(20, leftGround, 'deco_lamp').setOrigin(0.5, 1).setDepth(6);
-    this.add.image(90, leftGround, 'deco_fence1').setOrigin(0.5, 1).setDepth(6);
-    this.add.image(50, leftGround, 'deco_grass1').setOrigin(0.5, 1).setDepth(6);
-    this.add.image(140, leftGround, 'deco_grass2').setOrigin(0.5, 1).setDepth(6);
-    this.add.image(270, rightGround, 'deco_sign').setOrigin(0.5, 1).setDepth(6);
-    this.add.image(250, rightGround, 'deco_grass3').setOrigin(0.5, 1).setDepth(6);
+    this.add.image(O + 20, leftGround, 'deco_lamp').setOrigin(0.5, 1).setDepth(6);
+    this.add.image(O + 90, leftGround, 'deco_fence1').setOrigin(0.5, 1).setDepth(6);
+    this.add.image(O + 50, leftGround, 'deco_grass1').setOrigin(0.5, 1).setDepth(6);
+    this.add.image(O + 140, leftGround, 'deco_grass2').setOrigin(0.5, 1).setDepth(6);
+    this.add.image(O + 270, rightGround, 'deco_sign').setOrigin(0.5, 1).setDepth(6);
+    this.add.image(O + 250, rightGround, 'deco_grass3').setOrigin(0.5, 1).setDepth(6);
 
-    // Step 3: Character
+    // Character
     this.createAnimations();
 
-    this.player = this.physics.add.sprite(80, 100, 'char_blue');
+    this.player = this.physics.add.sprite(O + 80, 100, 'char_blue');
     this.player.setDepth(10);
     this.player.setSize(16, 28);
     this.player.setOffset(20, 24);
     this.player.play('char_blue_idle');
-    this.player.setCollideWorldBounds(true);
 
-    this.physics.world.setBounds(0, 0, 336, 192);
     this.physics.add.collider(this.player, groundLayer);
+
+    // Camera follows player horizontally with smooth lerp
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.roundPixels = true;
 
     this.cursors = this.input.keyboard!.createCursorKeys();
   }
@@ -167,6 +184,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   update() {
+    // Parallax: shift background tilePosition based on camera scroll
+    const camX = this.cameras.main.scrollX;
+    this.bgLayer1.tilePositionX = camX * 0;    // fixed sky
+    this.bgLayer2.tilePositionX = camX * 0.3;  // slow trees
+    this.bgLayer3.tilePositionX = camX * 0.6;  // closer trees
+
     const speed = 100;
     const jumpVelocity = -280;
     const body = this.player.body;
