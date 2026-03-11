@@ -1,0 +1,216 @@
+{
+  "version": "1.0",
+  "basePath": "assets/oak_woods",
+
+  "images": [
+    {
+      "key": "bg_layer1",
+      "path": "background/background_layer_1.png",
+      "width": 320,
+      "height": 180,
+      "note": "Furthest background layer (sky/trees)"
+    },
+    {
+      "key": "bg_layer2",
+      "path": "background/background_layer_2.png",
+      "width": 320,
+      "height": 180,
+      "note": "Middle background layer"
+    },
+    {
+      "key": "bg_layer3",
+      "path": "background/background_layer_3.png",
+      "width": 320,
+      "height": 180,
+      "note": "Foreground background layer (closest)"
+    },
+    {
+      "key": "deco_fence1",
+      "path": "decorations/fence_1.png",
+      "width": 73,
+      "height": 19
+    },
+    {
+      "key": "deco_fence2",
+      "path": "decorations/fence_2.png",
+      "width": 72,
+      "height": 19
+    },
+    {
+      "key": "deco_grass1",
+      "path": "decorations/grass_1.png",
+      "width": 8,
+      "height": 3
+    },
+    {
+      "key": "deco_grass2",
+      "path": "decorations/grass_2.png",
+      "width": 10,
+      "height": 5
+    },
+    {
+      "key": "deco_grass3",
+      "path": "decorations/grass_3.png",
+      "width": 9,
+      "height": 4
+    },
+    {
+      "key": "deco_lamp",
+      "path": "decorations/lamp.png",
+      "width": 23,
+      "height": 57
+    },
+    {
+      "key": "deco_rock1",
+      "path": "decorations/rock_1.png",
+      "width": 20,
+      "height": 11
+    },
+    {
+      "key": "deco_rock2",
+      "path": "decorations/rock_2.png",
+      "width": 27,
+      "height": 12
+    },
+    {
+      "key": "deco_rock3",
+      "path": "decorations/rock_3.png",
+      "width": 45,
+      "height": 18
+    },
+    {
+      "key": "deco_shop",
+      "path": "decorations/shop.png",
+      "width": 118,
+      "height": 98,
+      "note": "Static shop image (use shop_anim for animated version)"
+    },
+    {
+      "key": "deco_sign",
+      "path": "decorations/sign.png",
+      "width": 22,
+      "height": 31
+    }
+  ],
+
+  "spritesheets": [
+    {
+      "key": "char_blue",
+      "path": "character/char_blue.png",
+      "frameWidth": 64,
+      "frameHeight": 56,
+      "frameCount": 49,
+      "columns": 7,
+      "rows": 7,
+      "totalWidth": 448,
+      "totalHeight": 392,
+      "note": "Blue knight character. Rows 0-6, 7 frames each.",
+      "animations": [
+        {
+          "key": "char_blue_idle",
+          "row": 0,
+          "frameStart": 0,
+          "frameEnd": 6,
+          "frameCount": 7,
+          "frameRate": 8,
+          "repeat": -1
+        },
+        {
+          "key": "char_blue_attack",
+          "row": 1,
+          "frameStart": 7,
+          "frameEnd": 13,
+          "frameCount": 7,
+          "frameRate": 12,
+          "repeat": 0,
+          "note": "One-shot attack animation"
+        },
+        {
+          "key": "char_blue_run",
+          "row": 2,
+          "frameStart": 14,
+          "frameEnd": 20,
+          "frameCount": 7,
+          "frameRate": 10,
+          "repeat": -1
+        },
+        {
+          "key": "char_blue_jump",
+          "row": 3,
+          "frameStart": 21,
+          "frameEnd": 27,
+          "frameCount": 7,
+          "frameRate": 10,
+          "repeat": 0
+        },
+        {
+          "key": "char_blue_fall",
+          "row": 4,
+          "frameStart": 28,
+          "frameEnd": 34,
+          "frameCount": 7,
+          "frameRate": 10,
+          "repeat": -1
+        },
+        {
+          "key": "char_blue_roll",
+          "row": 5,
+          "frameStart": 35,
+          "frameEnd": 41,
+          "frameCount": 7,
+          "frameRate": 12,
+          "repeat": 0
+        },
+        {
+          "key": "char_blue_death",
+          "row": 6,
+          "frameStart": 42,
+          "frameEnd": 45,
+          "frameCount": 4,
+          "frameRate": 8,
+          "repeat": 0,
+          "note": "Partial row — only 4 frames used"
+        }
+      ]
+    },
+    {
+      "key": "shop_anim",
+      "path": "decorations/shop_anim.png",
+      "frameWidth": 118,
+      "frameHeight": 128,
+      "frameCount": 6,
+      "columns": 6,
+      "rows": 1,
+      "totalWidth": 708,
+      "totalHeight": 128,
+      "animations": [
+        {
+          "key": "shop_idle",
+          "frameStart": 0,
+          "frameEnd": 5,
+          "frameCount": 6,
+          "frameRate": 8,
+          "repeat": -1,
+          "note": "Looping shop sign glow / particle animation"
+        }
+      ]
+    }
+  ],
+
+  "tilesets": [
+    {
+      "key": "oak_woods_tileset",
+      "path": "oak_woods_tileset.png",
+      "tileWidth": 24,
+      "tileHeight": 24,
+      "columns": 21,
+      "rows": 15,
+      "tileCount": 315,
+      "totalWidth": 504,
+      "totalHeight": 360,
+      "margin": 0,
+      "spacing": 0,
+      "note": "Main environment tileset. Use with Phaser Tilemap (this.make.tilemap / addTilesetImage)."
+    }
+  ]
+}
