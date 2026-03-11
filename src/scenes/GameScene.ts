@@ -133,7 +133,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, groundLayer);
 
     // Camera follows player horizontally with smooth lerp
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0);
     this.cameras.main.roundPixels = true;
 
     this.cursors = this.input.keyboard!.createCursorKeys();
