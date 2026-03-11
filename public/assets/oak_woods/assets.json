@@ -97,79 +97,73 @@
     {
       "key": "char_blue",
       "path": "character/char_blue.png",
-      "frameWidth": 64,
+      "frameWidth": 56,
       "frameHeight": 56,
-      "frameCount": 49,
-      "columns": 7,
+      "frameCount": 56,
+      "columns": 8,
       "rows": 7,
       "totalWidth": 448,
       "totalHeight": 392,
-      "note": "Blue knight character. Rows 0-6, 7 frames each.",
+      "note": "Blue knight character. 8x7 grid, some frames blank.",
       "animations": [
         {
           "key": "char_blue_idle",
           "row": 0,
           "frameStart": 0,
-          "frameEnd": 6,
-          "frameCount": 7,
+          "frameEnd": 5,
+          "frameCount": 6,
           "frameRate": 8,
-          "repeat": -1
+          "repeat": -1,
+          "note": "Frames 6-7 blank"
         },
         {
           "key": "char_blue_attack",
           "row": 1,
-          "frameStart": 7,
+          "frameStart": 8,
           "frameEnd": 13,
-          "frameCount": 7,
+          "frameCount": 6,
           "frameRate": 12,
           "repeat": 0,
-          "note": "One-shot attack animation"
+          "note": "One-shot attack animation. Frames 14-15 blank"
         },
         {
           "key": "char_blue_run",
           "row": 2,
-          "frameStart": 14,
-          "frameEnd": 20,
-          "frameCount": 7,
+          "frameStart": 16,
+          "frameEnd": 23,
+          "frameCount": 8,
           "frameRate": 10,
           "repeat": -1
         },
         {
           "key": "char_blue_jump",
           "row": 3,
-          "frameStart": 21,
-          "frameEnd": 27,
-          "frameCount": 7,
+          "frameStart": 24,
+          "frameEnd": 31,
+          "frameCount": 8,
           "frameRate": 10,
-          "repeat": 0
+          "repeat": 0,
+          "note": "Jump ascent"
         },
         {
           "key": "char_blue_fall",
           "row": 4,
-          "frameStart": 28,
-          "frameEnd": 34,
-          "frameCount": 7,
+          "frameStart": 32,
+          "frameEnd": 39,
+          "frameCount": 8,
           "frameRate": 10,
-          "repeat": -1
-        },
-        {
-          "key": "char_blue_roll",
-          "row": 5,
-          "frameStart": 35,
-          "frameEnd": 41,
-          "frameCount": 7,
-          "frameRate": 12,
-          "repeat": 0
+          "repeat": -1,
+          "note": "Jump descent"
         },
         {
           "key": "char_blue_death",
-          "row": 6,
-          "frameStart": 42,
-          "frameEnd": 45,
-          "frameCount": 4,
+          "rows": [5, 6],
+          "frameStart": 40,
+          "frameEnd": 52,
+          "frameCount": 13,
           "frameRate": 8,
           "repeat": 0,
-          "note": "Partial row — only 4 frames used"
+          "note": "Spans rows 5-6. Frames 53-55 blank"
         }
       ]
     },
