@@ -13,32 +13,6 @@ export class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  preload() {
-    const base = 'assets/oak_woods';
-
-    // Background layers
-    this.load.image('bg_layer1', `${base}/background/background_layer_1.png`);
-    this.load.image('bg_layer2', `${base}/background/background_layer_2.png`);
-    this.load.image('bg_layer3', `${base}/background/background_layer_3.png`);
-
-    // Tileset (load as image for tilemap use)
-    this.load.image('oak_woods_tileset', `${base}/oak_woods_tileset.png`);
-
-    // Character
-    this.load.spritesheet('char_blue', `${base}/character/char_blue.png`, {
-      frameWidth: 56,
-      frameHeight: 56,
-    });
-
-    // Decorations
-    this.load.image('deco_lamp', `${base}/decorations/lamp.png`);
-    this.load.image('deco_fence1', `${base}/decorations/fence_1.png`);
-    this.load.image('deco_sign', `${base}/decorations/sign.png`);
-    this.load.image('deco_grass1', `${base}/decorations/grass_1.png`);
-    this.load.image('deco_grass2', `${base}/decorations/grass_2.png`);
-    this.load.image('deco_grass3', `${base}/decorations/grass_3.png`);
-  }
-
   create() {
     // Parallax backgrounds — fixed to camera, scrolled manually in update()
     this.bgLayer1 = this.add.tileSprite(160, 90, 320, 180, 'bg_layer1')
@@ -144,6 +118,36 @@ export class GameScene extends Phaser.Scene {
     this.attackKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
     this.player.on('animationcomplete-char_blue_attack', () => {
       this.isAttacking = false;
+    });
+
+    // Inventory overlay (I key)
+    this.input.keyboard!.on('keydown-I', () => {
+      this.scene.pause();
+      this.scene.launch('InventoryScene');
+    });
+
+    // Dialog overlay (T key for testing)
+    this.input.keyboard!.on('keydown-T', () => {
+      this.scene.pause();
+      this.scene.launch('DialogScene', {
+        lines: [
+          'Welcome to Oak Woods, traveler.',
+          'Beware the creatures that lurk in the shadows...',
+          'Good luck on your journey!',
+        ],
+      });
+    });
+
+    // Intro dialog on first start
+    this.scene.pause();
+    this.scene.launch('DialogScene', {
+      lines: [
+        'You awaken in the Oak Woods, a forgotten forest at the edge of the kingdom.',
+        'The trees whisper of ancient ruins and strange creatures nearby.',
+        'Use arrow keys to move, Space to jump, and Z to attack.',
+        'Press I to open your inventory.',
+        'Now go, brave knight. The woods await.',
+      ],
     });
   }
 
