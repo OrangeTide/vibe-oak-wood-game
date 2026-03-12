@@ -4,31 +4,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-2D pixel-art platformer built with Phaser 3, TypeScript, and Vite. Uses the [Oak Woods](https://brullov.itch.io/oak-woods) asset pack.
+2D pixel-art platformer built with Rust + macroquad, compiled to WebAssembly. Uses the [Oak Woods](https://brullov.itch.io/oak-woods) asset pack.
 
 ## Commands
 
-- `npm run dev` — Start Vite dev server (default: http://localhost:5173)
-- `npm run build` — Type-check with tsc then bundle with Vite
-- No test framework is configured yet
+- `cargo build` — Build native debug binary
+- `cargo run` — Run natively (needs `ln -sf public/assets assets` symlink first)
+- `./build.sh` — Build WASM release + package into `dist/`
+- `cd dist && python3 -m http.server 8080` — Serve WASM build locally
 
 ## Architecture
 
-- **`src/main.ts`** — Phaser game config (320×180 canvas, pixel art, Arcade physics, gravity 800)
-- **`src/scenes/GameScene.ts`** — Single scene containing all game logic: asset loading, parallax backgrounds, procedural tilemap ground, character animations, input handling, and camera follow
-- **`public/assets/oak_woods/`** — Static asset pack with `assets.json` manifest describing all images, spritesheets, and animations
-- **`index.html`** — Entry point, loads `src/main.ts` as ES module
+- **`src/main.rs`** — Complete game in a single file: asset loading, tilemap, animation system, physics, scene management, rendering
+- **`web/index.html`** — WASM entry point, loads macroquad JS bundle + .wasm
+- **`build.sh`** — Builds WASM target, downloads macroquad JS bundle, copies assets into `dist/`
+- **`public/assets/oak_woods/`** — Static asset pack (backgrounds, tileset, character spritesheet, decorations)
 
 ## Key Technical Details
 
-- Canvas is 320×180 native resolution with `Phaser.Scale.FIT` + `CENTER_BOTH` to fill browser
-- Tilemap is procedurally generated via `this.make.tilemap()` + `createBlankLayer()` (no Tiled JSON)
-- Tileset tile indices: TL=0, TC=1, TC2=2, TR=3, ML=21, MC=22, MR=24
-- Ground is 2000 tiles wide (~48000px) for effectively infinite scrolling
-- Parallax driven by `tilePositionX = camera.scrollX * rate` in update() (rates: 0, 0.3, 0.6)
-- Camera follows player horizontally only (Y lerp = 0 to prevent bounce on jump)
-- Character spritesheet: 56×56 frames; animations: idle(0-5), attack(8-13), run(16-23), jump(24-31), fall(32-39), death(40-52)
+- Virtual resolution 320×180 rendered to a `RenderTarget`, then scaled with `FIT` + center to fill the window/canvas
+- Tilemap is procedurally generated at init (2000×8 tiles, 24×24px each)
+- Tileset tile indices: TL=0, TC=1, TC2=2, TR=3, ML=21, MC=22, MR=24 (tileset is 21 columns wide)
+- Character spritesheet: 56×56 frames, 8 columns; animations: idle(0-5), attack(8-13), run(16-23), jump(24-31), fall(32-39)
+- Parallax backgrounds drawn in screen space with rate offsets (0, 0.3, 0.6)
+- Camera follows player horizontally only (Y fixed at -14); lerp 0.1
+- Custom AABB tile collision (no physics engine): separate X then Y resolution
+- Scene state machine: Title → Menu → Game (with Inventory/Dialog overlays)
+- WASM build target: `wasm32-unknown-unknown`, served with macroquad's `mq_js_bundle.js`
 
-## Vite Config Note
+## Legacy Files
 
-`server.watch.usePolling` is enabled in `vite.config.ts` to work around inotify watcher limits on this machine.
+The original TypeScript/Phaser 3 source files remain in `src/` (`.ts` files) and can be removed. The Rust build ignores them.

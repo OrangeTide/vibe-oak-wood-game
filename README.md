@@ -1,19 +1,31 @@
 # Oak Woods
 
-A 2D pixel-art platformer built with Phaser 3, TypeScript, and Vite.
+A 2D pixel-art platformer built with Rust + [macroquad](https://macroquad.rs/), compiled to WebAssembly.
 
 Just a demo of what can be done with vibe coding. Does not actually go anywhere or do anything.
 
 [Play](https://orangetide.github.io/vibe-oak-wood-game/)
 
-## Setup
+## Prerequisites
+
+- [Rust](https://rustup.rs/) toolchain
+- `wasm32-unknown-unknown` target (`rustup target add wasm32-unknown-unknown`)
+
+## Build & Run (WASM)
 
 ```bash
-npm install
-npm run dev
+./build.sh
+cd dist && python3 -m http.server 8080
 ```
 
-Open the URL shown in the terminal (default: `http://localhost:5173`).
+Open `http://localhost:8080` in your browser.
+
+## Build & Run (Native)
+
+```bash
+ln -sf public/assets assets
+cargo run
+```
 
 ## Controls
 
@@ -23,7 +35,7 @@ Open the URL shown in the terminal (default: `http://localhost:5173`).
 | Space / Up arrow | Jump |
 | Z | Attack |
 | I | Inventory (does nothing) |
-| T | a test dialog |
+| T | Test dialog |
 
 ## Assets
 
