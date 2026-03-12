@@ -547,40 +547,28 @@ fn draw_dialog_overlay(lines: &[String], index: usize, time: f32) {
 fn window_conf() -> Conf {
     Conf {
         window_title: "Oak Woods".to_string(),
-        window_width: 960,
+        window_width: 960,   // 16:9 matching 320:180
         window_height: 540,
+        window_resizable: true,
         high_dpi: false,
         ..Default::default()
     }
 }
 
-/// Calculate the viewport rect that fits VIRTUAL_W×VIRTUAL_H centered on screen.
-/// Returns (x, y, w, h) in GL screen coordinates (y=0 is bottom).
-fn calc_viewport() -> (i32, i32, i32, i32) {
-    let scale = (screen_width() / VIRTUAL_W).min(screen_height() / VIRTUAL_H);
-    let vw = (VIRTUAL_W * scale) as i32;
-    let vh = (VIRTUAL_H * scale) as i32;
-    let vx = ((screen_width() as i32 - vw) / 2).max(0);
-    let vy = ((screen_height() as i32 - vh) / 2).max(0);
-    (vx, vy, vw, vh)
-}
-
 /// Camera showing a fixed 320×180 world rect (for backgrounds, UI, overlays).
-fn fixed_cam(viewport: (i32, i32, i32, i32)) -> Camera2D {
+fn fixed_cam() -> Camera2D {
     Camera2D {
         zoom: vec2(2.0 / VIRTUAL_W, 2.0 / VIRTUAL_H),
         target: vec2(VIRTUAL_W / 2.0, VIRTUAL_H / 2.0),
-        viewport: Some(viewport),
         ..Default::default()
     }
 }
 
 /// Camera showing a scrolling 320×180 world rect at (cam_x, CAM_Y).
-fn world_cam(cam_x: f32, viewport: (i32, i32, i32, i32)) -> Camera2D {
+fn world_cam(cam_x: f32) -> Camera2D {
     Camera2D {
         zoom: vec2(2.0 / VIRTUAL_W, 2.0 / VIRTUAL_H),
         target: vec2(cam_x + VIRTUAL_W / 2.0, CAM_Y + VIRTUAL_H / 2.0),
-        viewport: Some(viewport),
         ..Default::default()
     }
 }
@@ -612,7 +600,6 @@ async fn main() {
         set_default_camera();
         clear_background(BLACK);
 
-        let vp = calc_viewport();
         let mut next_scene: Option<Scene> = None;
 
         match &mut scene {
@@ -620,7 +607,7 @@ async fn main() {
             Scene::Title { blink_timer } => {
                 *blink_timer += dt;
 
-                set_camera(&fixed_cam(vp));
+                set_camera(&fixed_cam());
 
                 // Backgrounds
                 draw_texture(&assets.bg1, 0.0, 0.0, WHITE);
@@ -646,7 +633,7 @@ async fn main() {
 
             // ── Menu Scene ──────────────────────────────────────────────
             Scene::Menu { selected } => {
-                set_camera(&fixed_cam(vp));
+                set_camera(&fixed_cam());
 
                 draw_texture(&assets.bg1, 0.0, 0.0, WHITE);
                 draw_texture(&assets.bg2, 0.0, 0.0, WHITE);
@@ -750,14 +737,14 @@ async fn main() {
                 }
 
                 // ── Draw backgrounds (fixed camera) ─────────────────────
-                set_camera(&fixed_cam(vp));
+                set_camera(&fixed_cam());
 
                 draw_parallax(&assets.bg1, *cam_x, 0.0);
                 draw_parallax(&assets.bg2, *cam_x, 0.3);
                 draw_parallax(&assets.bg3, *cam_x, 0.6);
 
                 // ── Draw world (scrolling camera) ───────────────────────
-                set_camera(&world_cam(*cam_x, vp));
+                set_camera(&world_cam(*cam_x));
 
                 draw_tilemap_visible(&tilemap, &assets.tileset, *cam_x);
                 draw_decorations(&assets);
@@ -773,7 +760,7 @@ async fn main() {
 
                 // ── Draw overlays (fixed camera) ────────────────────────
                 if let Some(ov) = overlay {
-                    set_camera(&fixed_cam(vp));
+                    set_camera(&fixed_cam());
                     match ov {
                         Overlay::Inventory => draw_inventory_overlay(),
                         Overlay::Dialog { lines, index } => {
