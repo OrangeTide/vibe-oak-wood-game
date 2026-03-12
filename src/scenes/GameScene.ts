@@ -3,6 +3,8 @@ import Phaser from 'phaser';
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private attackKey!: Phaser.Input.Keyboard.Key;
+  private isAttacking = false;
   private bgLayer1!: Phaser.GameObjects.TileSprite;
   private bgLayer2!: Phaser.GameObjects.TileSprite;
   private bgLayer3!: Phaser.GameObjects.TileSprite;
@@ -137,6 +139,10 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.roundPixels = true;
 
     this.cursors = this.input.keyboard!.createCursorKeys();
+    this.attackKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+    this.player.on('animationcomplete-char_blue_attack', () => {
+      this.isAttacking = false;
+    });
   }
 
   private createAnimations() {
@@ -195,8 +201,10 @@ export class GameScene extends Phaser.Scene {
     const body = this.player.body;
     const onGround = body.blocked.down;
 
-    // Horizontal movement
-    if (this.cursors.left.isDown) {
+    // Horizontal movement (stop during attack)
+    if (this.isAttacking) {
+      this.player.setVelocityX(0);
+    } else if (this.cursors.left.isDown) {
       this.player.setVelocityX(-speed);
       this.player.setFlipX(true);
     } else if (this.cursors.right.isDown) {
@@ -211,17 +219,25 @@ export class GameScene extends Phaser.Scene {
       this.player.setVelocityY(jumpVelocity);
     }
 
-    // Animation state
-    if (!onGround) {
-      if (body.velocity.y < 0) {
-        this.player.play('char_blue_jump', true);
+    // Attack
+    if (Phaser.Input.Keyboard.JustDown(this.attackKey) && onGround && !this.isAttacking) {
+      this.isAttacking = true;
+      this.player.play('char_blue_attack', true);
+    }
+
+    // Animation state (skip if attacking)
+    if (!this.isAttacking) {
+      if (!onGround) {
+        if (body.velocity.y < 0) {
+          this.player.play('char_blue_jump', true);
+        } else {
+          this.player.play('char_blue_fall', true);
+        }
+      } else if (body.velocity.x !== 0) {
+        this.player.play('char_blue_run', true);
       } else {
-        this.player.play('char_blue_fall', true);
+        this.player.play('char_blue_idle', true);
       }
-    } else if (body.velocity.x !== 0) {
-      this.player.play('char_blue_run', true);
-    } else {
-      this.player.play('char_blue_idle', true);
     }
   }
 }
