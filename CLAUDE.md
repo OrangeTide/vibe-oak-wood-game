@@ -31,7 +31,3 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Custom AABB tile collision (no physics engine): separate X then Y resolution
 - Scene state machine: Title → Menu → Game (with Inventory/Dialog overlays)
 - WASM build target: `wasm32-unknown-unknown`, served with macroquad's `mq_js_bundle.js`
-
-## Legacy Files
-
-The original TypeScript/Phaser 3 source files remain in `src/` (`.ts` files) and can be removed. The Rust build ignores them.

@@ -51,6 +51,7 @@ struct Assets {
     deco_grass1: Texture2D,
     deco_grass2: Texture2D,
     deco_grass3: Texture2D,
+    font: Font,
 }
 
 async fn load_tex(path: &str) -> Texture2D {
@@ -64,6 +65,9 @@ async fn load_tex(path: &str) -> Texture2D {
 impl Assets {
     async fn load() -> Self {
         let b = "assets/oak_woods";
+        let font = load_ttf_font("assets/PressStart2P-Regular.ttf")
+            .await
+            .expect("Failed to load font");
         Assets {
             bg1: load_tex(&format!("{b}/background/background_layer_1.png")).await,
             bg2: load_tex(&format!("{b}/background/background_layer_2.png")).await,
@@ -76,6 +80,7 @@ impl Assets {
             deco_grass1: load_tex(&format!("{b}/decorations/grass_1.png")).await,
             deco_grass2: load_tex(&format!("{b}/decorations/grass_2.png")).await,
             deco_grass3: load_tex(&format!("{b}/decorations/grass_3.png")).await,
+            font,
         }
     }
 }
@@ -383,6 +388,7 @@ fn update_player(player: &mut Player, tilemap: &Tilemap, dt: f32) {
 enum Overlay {
     Inventory,
     Dialog { lines: Vec<String>, index: usize },
+    Pause { selected: usize },
 }
 
 enum Scene {
@@ -397,15 +403,79 @@ enum Scene {
 
 // ── Drawing helpers ─────────────────────────────────────────────────────────
 
-fn draw_centered_text(text: &str, x: f32, y: f32, font_size: u16, color: Color) {
-    let m = measure_text(text, None, font_size, 1.0);
-    draw_text(
+fn draw_centered_text(text: &str, x: f32, y: f32, world_size: f32, font: &Font, color: Color) {
+    let (fs, scale, aspect) = camera_font_scale(world_size);
+    let total_scale = scale * aspect;
+    let m = measure_text(text, Some(font), fs, total_scale);
+    draw_text_ex(
         text,
         x - m.width / 2.0,
         y - m.height / 2.0 + m.offset_y,
-        font_size as f32,
-        color,
+        TextParams {
+            font: Some(font),
+            font_size: fs,
+            font_scale: total_scale,
+            color,
+            ..Default::default()
+        },
     );
+}
+
+fn draw_retro_text(text: &str, x: f32, y: f32, world_size: f32, font: &Font, color: Color) {
+    let (fs, scale, aspect) = camera_font_scale(world_size);
+    draw_text_ex(
+        text,
+        x,
+        y,
+        TextParams {
+            font: Some(font),
+            font_size: fs,
+            font_scale: scale * aspect,
+            color,
+            ..Default::default()
+        },
+    );
+}
+
+/// Word-wrap text to fit within max_width world units, then draw each line.
+fn draw_retro_text_wrapped(
+    text: &str, x: f32, y: f32, world_size: f32, max_width: f32,
+    line_spacing: f32, font: &Font, color: Color,
+) {
+    let (fs, scale, aspect) = camera_font_scale(world_size);
+    let total_scale = scale * aspect;
+    let params = TextParams {
+        font: Some(font),
+        font_size: fs,
+        font_scale: total_scale,
+        color,
+        ..Default::default()
+    };
+
+    let mut lines: Vec<String> = Vec::new();
+    let mut current_line = String::new();
+
+    for word in text.split_whitespace() {
+        let candidate = if current_line.is_empty() {
+            word.to_string()
+        } else {
+            format!("{current_line} {word}")
+        };
+        let m = measure_text(&candidate, Some(font), fs, total_scale);
+        if m.width > max_width && !current_line.is_empty() {
+            lines.push(current_line);
+            current_line = word.to_string();
+        } else {
+            current_line = candidate;
+        }
+    }
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+
+    for (i, line) in lines.iter().enumerate() {
+        draw_text_ex(line, x, y + i as f32 * line_spacing, params.clone());
+    }
 }
 
 fn draw_parallax(tex: &Texture2D, cam_x: f32, rate: f32) {
@@ -490,11 +560,11 @@ fn draw_decorations(assets: &Assets) {
     draw_deco(&assets.deco_grass3, DECO_OFFSET + 250.0, right_ground);
 }
 
-fn draw_inventory_overlay() {
+fn draw_inventory_overlay(font: &Font) {
     draw_rectangle(20.0, 20.0, 280.0, 140.0, Color::new(0.0, 0.0, 0.0, 0.8));
     draw_rectangle_lines(20.0, 20.0, 280.0, 140.0, 1.0, WHITE);
 
-    draw_centered_text("Inventory", 160.0, 34.0, 20, WHITE);
+    draw_centered_text("Inventory", 160.0, 34.0, 12.0, font, WHITE);
 
     for row in 0..2 {
         for col in 0..4 {
@@ -509,12 +579,13 @@ fn draw_inventory_overlay() {
         "Press I to close",
         160.0,
         150.0,
-        12,
+        6.0,
+        font,
         Color::new(0.53, 0.53, 0.53, 1.0),
     );
 }
 
-fn draw_dialog_overlay(lines: &[String], index: usize, time: f32) {
+fn draw_dialog_overlay(lines: &[String], index: usize, time: f32, font: &Font) {
     let bx = 10.0;
     let by = 133.0;
     let bw = 300.0;
@@ -524,7 +595,9 @@ fn draw_dialog_overlay(lines: &[String], index: usize, time: f32) {
     draw_rectangle_lines(bx, by, bw, bh, 1.0, WHITE);
 
     if index < lines.len() {
-        draw_text(&lines[index], 18.0, 152.0, 14.0, WHITE);
+        draw_retro_text_wrapped(
+            &lines[index], 18.0, 140.0, 6.0, bw - 16.0, 10.0, font, WHITE,
+        );
     }
 
     // Blinking advance prompt
@@ -533,13 +606,32 @@ fn draw_dialog_overlay(lines: &[String], index: usize, time: f32) {
     } else {
         0.3
     };
-    draw_text(
+    draw_retro_text(
         ">",
         298.0,
         172.0,
-        12.0,
+        8.0,
+        font,
         Color::new(0.8, 0.8, 0.8, alpha),
     );
+}
+
+fn draw_pause_overlay(selected: usize, font: &Font) {
+    let items = ["Save", "Help", "Quit to Main"];
+    draw_rectangle(60.0, 40.0, 200.0, 100.0, Color::new(0.0, 0.0, 0.0, 0.85));
+    draw_rectangle_lines(60.0, 40.0, 200.0, 100.0, 1.0, WHITE);
+
+    draw_centered_text("Paused", 160.0, 54.0, 10.0, font, WHITE);
+
+    for (i, label) in items.iter().enumerate() {
+        let color = if i == selected { WHITE } else { Color::new(0.67, 0.67, 0.67, 1.0) };
+        let text = if i == selected {
+            format!("> {label}")
+        } else {
+            label.to_string()
+        };
+        draw_centered_text(&text, 160.0, 76.0 + i as f32 * 16.0, 7.0, font, color);
+    }
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
@@ -615,7 +707,7 @@ async fn main() {
                 draw_texture(&assets.bg3, 0.0, 0.0, WHITE);
 
                 // Title
-                draw_centered_text("Oak Woods", 160.0, 60.0, 28, WHITE);
+                draw_centered_text("Oak Woods", 160.0, 60.0, 16.0, &assets.font, WHITE);
 
                 // Blinking prompt
                 let alpha = if (*blink_timer * 1.25).sin() > 0.0 {
@@ -624,7 +716,7 @@ async fn main() {
                     0.0
                 };
                 let c = Color::new(0.8, 0.8, 0.8, alpha);
-                draw_centered_text("Press any key", 160.0, 120.0, 14, c);
+                draw_centered_text("Press any key", 160.0, 120.0, 8.0, &assets.font, c);
 
                 if get_last_key_pressed().is_some() {
                     next_scene = Some(Scene::Menu { selected: 0 });
@@ -639,9 +731,12 @@ async fn main() {
                 draw_texture(&assets.bg2, 0.0, 0.0, WHITE);
                 draw_texture(&assets.bg3, 0.0, 0.0, WHITE);
 
-                draw_centered_text("Oak Woods", 160.0, 40.0, 24, WHITE);
+                draw_centered_text("Oak Woods", 160.0, 40.0, 16.0, &assets.font, WHITE);
 
-                let items = ["New Game", "Continue", "Options"];
+                let mut items: Vec<&str> = vec!["New Game", "Continue", "Options"];
+                #[cfg(not(target_arch = "wasm32"))]
+                items.push("Quit Game");
+
                 for (i, label) in items.iter().enumerate() {
                     let color = if i == *selected {
                         WHITE
@@ -653,7 +748,7 @@ async fn main() {
                     } else {
                         label.to_string()
                     };
-                    draw_centered_text(&text, 160.0, 80.0 + i as f32 * 24.0, 16, color);
+                    draw_centered_text(&text, 160.0, 80.0 + i as f32 * 18.0, 8.0, &assets.font, color);
                 }
 
                 if is_key_pressed(KeyCode::Up) {
@@ -674,6 +769,10 @@ async fn main() {
                                 }),
                             });
                         }
+                        3 => {
+                            #[cfg(not(target_arch = "wasm32"))]
+                            std::process::exit(0);
+                        }
                         _ => {} // Options: no-op
                     }
                 }
@@ -687,26 +786,60 @@ async fn main() {
             } => {
                 let paused = overlay.is_some();
 
-                // Handle overlay input
-                if let Some(ov) = overlay {
+                // Handle overlay input — compute next state without borrowing overlay
+                let mut overlay_action: Option<Option<Overlay>> = None;
+                if let Some(ov) = overlay.as_mut() {
                     match ov {
                         Overlay::Inventory => {
                             if is_key_pressed(KeyCode::I) || is_key_pressed(KeyCode::Escape) {
-                                *overlay = None;
+                                overlay_action = Some(None);
                             }
                         }
                         Overlay::Dialog { lines, index } => {
                             if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Enter) {
                                 *index += 1;
                                 if *index >= lines.len() {
-                                    *overlay = None;
+                                    overlay_action = Some(None);
                                 }
                             }
                             if is_key_pressed(KeyCode::Escape) {
-                                *overlay = None;
+                                overlay_action = Some(None);
+                            }
+                        }
+                        Overlay::Pause { selected } => {
+                            if is_key_pressed(KeyCode::Up) {
+                                *selected = (*selected + 2) % 3;
+                            }
+                            if is_key_pressed(KeyCode::Down) {
+                                *selected = (*selected + 1) % 3;
+                            }
+                            if is_key_pressed(KeyCode::Escape) {
+                                overlay_action = Some(None);
+                            }
+                            if is_key_pressed(KeyCode::Enter) || is_key_pressed(KeyCode::Space) {
+                                match *selected {
+                                    0 => { /* Save: no-op for now */ }
+                                    1 => {
+                                        overlay_action = Some(Some(Overlay::Dialog {
+                                            lines: vec![
+                                                "Arrow keys to move, Space to jump, Z to attack.".into(),
+                                                "Press I for inventory, T for dialog, Esc to pause.".into(),
+                                            ],
+                                            index: 0,
+                                        }));
+                                    }
+                                    2 => {
+                                        next_scene = Some(Scene::Menu { selected: 0 });
+                                        overlay_action = Some(None);
+                                    }
+                                    _ => {}
+                                }
                             }
                         }
                     }
+                }
+                if let Some(new_overlay) = overlay_action {
+                    *overlay = new_overlay;
                 }
 
                 // Update game if not paused
@@ -717,6 +850,11 @@ async fn main() {
                     let target_x = player.x - VIRTUAL_W / 2.0;
                     *cam_x += (target_x - *cam_x) * 0.1;
                     *cam_x = cam_x.clamp(0.0, MAP_W as f32 * TILE_SIZE - VIRTUAL_W);
+
+                    // Pause menu
+                    if is_key_pressed(KeyCode::Escape) {
+                        *overlay = Some(Overlay::Pause { selected: 0 });
+                    }
 
                     // Open inventory
                     if is_key_pressed(KeyCode::I) {
@@ -762,9 +900,12 @@ async fn main() {
                 if let Some(ov) = overlay {
                     set_camera(&fixed_cam());
                     match ov {
-                        Overlay::Inventory => draw_inventory_overlay(),
+                        Overlay::Inventory => draw_inventory_overlay(&assets.font),
                         Overlay::Dialog { lines, index } => {
-                            draw_dialog_overlay(lines, *index, time);
+                            draw_dialog_overlay(lines, *index, time, &assets.font);
+                        }
+                        Overlay::Pause { selected } => {
+                            draw_pause_overlay(*selected, &assets.font);
                         }
                     }
                 }
