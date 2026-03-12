@@ -62,6 +62,7 @@ export class GameScene extends Phaser.Scene {
     const groundLayer = map.createBlankLayer('ground', tileset)!;
     groundLayer.setDepth(5);
 
+
     // Tile indices (verified from tileset reference image)
     const TL = 0;   // top-left corner (grass + left edge)
     const TC = 1;   // top center (grass surface)
@@ -134,8 +135,9 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.collider(this.player, groundLayer);
 
-    // Camera follows player horizontally with smooth lerp
+    // Camera follows player horizontally only (no vertical follow)
     this.cameras.main.startFollow(this.player, true, 0.1, 0);
+    this.cameras.main.scrollY = this.player.y - this.cameras.main.height / 2 - 24;
     this.cameras.main.roundPixels = true;
 
     this.cursors = this.input.keyboard!.createCursorKeys();
